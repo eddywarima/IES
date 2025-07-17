@@ -1,7 +1,6 @@
 # 🗳️ IEBC Voting Portal 🇰🇪  
 ### A Complete Digital Election System for Kenya – Built with HTML, CSS, PHP & MySQL
 
-![IEBC Banner](https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/IEBC_Logo.svg/1200px-IEBC_Logo.svg.png)
 
 > A secure, transparent, and fully digitized election platform — from **voter registration** to **live vote counting** — crafted with simplicity and integrity for the Independent Electoral and Boundaries Commission (IEBC) of Kenya.
 
