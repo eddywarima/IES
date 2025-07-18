@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - IEBC Voting Portal</title>
+    <style>
+        :root {
+            --kenya-black: #000000;
+            --kenya-red: #BB1E10;
+            --kenya-green: #006400;
+            --kenya-white: #FFFFFF;
+        }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, var(--kenya-white) 0%, var(--kenya-green) 100%); min-height: 100vh; }
+        header { background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-red) 100%); color: var(--kenya-white); padding: 2rem 0 1rem 0; text-align: center; letter-spacing: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        header h2 { margin: 0; font-size: 2rem; font-weight: bold; }
+        header .flag-bar { display: flex; justify-content: center; margin: 1rem 0 0.5rem 0; }
+        .flag-bar span { display: inline-block; width: 40px; height: 8px; margin: 0 2px; border-radius: 4px; }
+        .flag-black { background: var(--kenya-black); }
+        .flag-red { background: var(--kenya-red); }
+        .flag-green { background: var(--kenya-green); }
+        nav.tabs { display: flex; justify-content: center; background: var(--kenya-black); }
+        nav.tabs button { background: none; border: none; color: var(--kenya-white); font-size: 1.1rem; font-weight: 600; padding: 1rem 2rem; cursor: pointer; transition: background 0.2s; }
+        nav.tabs button.active, nav.tabs button:hover { background: var(--kenya-green); color: var(--kenya-white); }
+        main { max-width: 1100px; margin: 2rem auto; background: var(--kenya-white); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2.5rem 2rem 2rem 2rem; }
+        section.admin-section { display: none; }
+        section.admin-section.active { display: block; }
+        .logout-btn { float: right; margin: 1rem 2rem 0 0; background: var(--kenya-red); color: var(--kenya-white); border: none; padding: 0.5rem 1.2rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .logout-btn:hover { background: var(--kenya-black); }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid #ccc; padding: 0.6rem; text-align: left; }
+        th { background: var(--kenya-green); color: var(--kenya-white); }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .action-btn { background: var(--kenya-red); color: var(--kenya-white); border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.95rem; cursor: pointer; margin-right: 0.3rem; }
+        .action-btn:hover { background: var(--kenya-black); }
+        .section-message { color: var(--kenya-red); margin: 0.5rem 0; }
+        .success-message { color: var(--kenya-green); margin: 0.5rem 0; }
+        .loading { color: var(--kenya-black); font-style: italic; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.3); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: #fff; padding: 2rem; border-radius: 10px; min-width: 320px; max-width: 95vw; }
+        .modal-content h4 { margin-top: 0; }
+        .modal-content label { display: block; margin: 0.7rem 0 0.2rem 0; font-weight: bold; }
+        .modal-content input, .modal-content select { width: 100%; padding: 0.5rem; margin-bottom: 1rem; border-radius: 5px; border: 1px solid #ccc; }
+        .modal-content button { margin-right: 0.5rem; }
+        @media (max-width: 900px) { main { padding: 1.2rem 0.5rem; } nav.tabs button { padding: 1rem 0.7rem; font-size: 1rem; } }
+    </style>
+</head>
+<body>
+    <header>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        <h2>Admin Dashboard</h2>
+        <div class="flag-bar">
+            <span class="flag-black"></span>
+            <span class="flag-red"></span>
+            <span class="flag-green"></span>
+        </div>
+    </header>
+    <nav class="tabs">
+        <button class="tab-btn active" data-tab="elections">Elections</button>
+        <button class="tab-btn" data-tab="candidates">Candidates</button>
+        <button class="tab-btn" data-tab="voters">Voters</button>
+        <button class="tab-btn" data-tab="results">Results</button>
+        <button class="tab-btn" data-tab="audit">Audit Logs</button>
+        <button class="tab-btn" data-tab="admins">Admins</button>
+    </nav>
+    <main>
+        <section id="elections" class="admin-section active">
+            <h3>Elections Management</h3>
+            <div class="section-message" id="elections-message"></div>
+            <div class="success-message" id="elections-success"></div>
+            <button class="action-btn" onclick="showElectionModal()">Create Election</button>
+            <div id="elections-content"></div>
+        </section>
+        <section id="candidates" class="admin-section">
+            <h3>Candidate Management</h3>
+            <div class="section-message" id="candidates-message"></div>
+            <div class="success-message" id="candidates-success"></div>
+            <div id="candidates-content"></div>
+        </section>
+        <section id="voters" class="admin-section">
+            <h3>Voter Management</h3>
+            <div class="section-message" id="voters-message"></div>
+            <div class="success-message" id="voters-success"></div>
+            <div id="voters-content"></div>
+        </section>
+        <section id="results" class="admin-section">
+            <h3>Results & Statistics</h3>
+            <div class="section-message" id="results-message"></div>
+            <div class="success-message" id="results-success"></div>
+            <div id="results-content"></div>
+            <button class="action-btn" onclick="triggerCount()">Trigger Counting</button>
+            <button class="action-btn" onclick="publishResults()">Publish Results</button>
+            <button class="action-btn" onclick="exportResults()">Export Results</button>
+        </section>
+        <section id="audit" class="admin-section">
+            <h3>Audit Logs</h3>
+            <div class="section-message" id="audit-message"></div>
+            <div class="success-message" id="audit-success"></div>
+            <div id="audit-content"></div>
+            <button class="action-btn" onclick="exportLogs()">Export Logs</button>
+        </section>
+        <section id="admins" class="admin-section">
+            <h3>Admin Management</h3>
+            <div class="section-message" id="admins-message"></div>
+            <div class="success-message" id="admins-success"></div>
+            <button class="action-btn" onclick="showAdminModal()">Add Admin</button>
+            <div id="admins-content"></div>
+        </section>
+    </main>
+    <!-- Modals -->
+    <div class="modal" id="election-modal">
+        <div class="modal-content">
+            <h4 id="election-modal-title">Create Election</h4>
+            <form id="electionForm">
+                <input type="hidden" id="election-id">
+                <label for="election-name">Name</label>
+                <input type="text" id="election-name" required>
+                <label for="election-start">Start Date</label>
+                <input type="datetime-local" id="election-start" required>
+                <label for="election-end">End Date</label>
+                <input type="datetime-local" id="election-end" required>
+                <label for="election-status" style="display:none;">Status</label>
+                <select id="election-status" style="display:none;">
+                    <option value="upcoming">Upcoming</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <button type="submit" class="action-btn">Save</button>
+                <button type="button" class="action-btn" onclick="closeElectionModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="admin-modal">
+        <div class="modal-content">
+            <h4>Add Admin</h4>
+            <form id="adminForm">
+                <label for="admin-username">Username</label>
+                <input type="text" id="admin-username" required>
+                <label for="admin-name">Name</label>
+                <input type="text" id="admin-name" required>
+                <label for="admin-password">Password</label>
+                <input type="password" id="admin-password" required>
+                <button type="submit" class="action-btn">Add</button>
+                <button type="button" class="action-btn" onclick="closeAdminModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    <script>
+    // Tab switching logic
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(this.dataset.tab).classList.add('active');
+            loadSection(this.dataset.tab);
+        });
+    });
+
+    // CSRF token
+    let csrfToken = '';
+    function fetchCSRFToken() {
+        return fetch('/backend/config/get_csrf.php', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => { csrfToken = data.csrf_token; });
+    }
+
+    // Section loaders
+    function loadSection(section) {
+        clearMessages();
+        switch(section) {
+            case 'elections': loadElections(); break;
+            case 'candidates': loadCandidates(); break;
+            case 'voters': loadVoters(); break;
+            case 'results': loadResults(); break;
+            case 'audit': loadAuditLogs(); break;
+            case 'admins': loadAdmins(); break;
+        }
+    }
+    // Initial load
+    fetchCSRFToken().then(() => loadSection('elections'));
+
+    function clearMessages() {
+        document.querySelectorAll('.section-message').forEach(e => e.textContent = '');
+        document.querySelectorAll('.success-message').forEach(e => e.textContent = '');
+    }
+
+    // --- Elections ---
+    function loadElections() {
+        setLoading('elections-content');
+        fetch('/backend/admin/elections.php?action=list', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderTable('elections-content', data.elections, ['ID', 'Name', 'Start', 'End', 'Status'], 'election');
+                } else {
+                    document.getElementById('elections-content').textContent = data.message;
+                }
+            });
+    }
+    function showElectionModal(edit = false, row = null) {
+        document.getElementById('election-modal-title').textContent = edit ? 'Edit Election' : 'Create Election';
+        document.getElementById('electionForm').reset();
+        document.getElementById('election-id').value = edit && row ? row.ID : '';
+        document.getElementById('election-name').value = edit && row ? row.Name : '';
+        document.getElementById('election-start').value = edit && row ? row.Start.replace(' ', 'T') : '';
+        document.getElementById('election-end').value = edit && row ? row.End.replace(' ', 'T') : '';
+        document.getElementById('election-status').style.display = edit ? '' : 'none';
+        document.getElementById('election-status').value = edit && row ? row.Status : 'upcoming';
+        document.getElementById('election-modal').classList.add('active');
+    }
+    function closeElectionModal() {
+        document.getElementById('election-modal').classList.remove('active');
+    }
+    document.getElementById('electionForm').onsubmit = function(e) {
+        e.preventDefault();
+        const id = document.getElementById('election-id').value;
+        const name = document.getElementById('election-name').value;
+        const start = document.getElementById('election-start').value;
+        const end = document.getElementById('election-end').value;
+        const status = document.getElementById('election-status').value;
+        const isEdit = !!id;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('name', name);
+        formData.append('start_date', start);
+        formData.append('end_date', end);
+        if (isEdit) {
+            formData.append('id', id);
+            formData.append('status', status);
+        }
+        fetch('/backend/admin/elections.php?action=' + (isEdit ? 'update' : 'create'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('elections-success').textContent = data.message;
+                closeElectionModal();
+                fetchCSRFToken().then(loadElections);
+            } else {
+                document.getElementById('elections-message').textContent = data.message;
+            }
+        });
+    };
+    function editElection(row) {
+        showElectionModal(true, row);
+    }
+    function deleteElection(row) {
+        if (!confirm('Delete this election?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('id', row.ID);
+        fetch('/backend/admin/elections.php?action=delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('elections-success').textContent = data.message;
+                fetchCSRFToken().then(loadElections);
+            } else {
+                document.getElementById('elections-message').textContent = data.message;
+            }
+        });
+    }
+    // --- Candidates ---
+    function loadCandidates() {
+        setLoading('candidates-content');
+        fetch('/backend/admin/candidates.php?action=list', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderTable('candidates-content', data.candidates, ['ID', 'Name', 'Seat', 'Status'], 'candidate');
+                } else {
+                    document.getElementById('candidates-content').textContent = data.message;
+                }
+            });
+    }
+    function approveCandidate(row) {
+        if (!confirm('Approve this candidate?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('id', row.ID);
+        fetch('/backend/admin/candidates.php?action=approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('candidates-success').textContent = data.message;
+                fetchCSRFToken().then(loadCandidates);
+            } else {
+                document.getElementById('candidates-message').textContent = data.message;
+            }
+        });
+    }
+    function rejectCandidate(row) {
+        if (!confirm('Reject this candidate?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('id', row.ID);
+        fetch('/backend/admin/candidates.php?action=reject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('candidates-success').textContent = data.message;
+                fetchCSRFToken().then(loadCandidates);
+            } else {
+                document.getElementById('candidates-message').textContent = data.message;
+            }
+        });
+    }
+    // --- Voters ---
+    function loadVoters() {
+        setLoading('voters-content');
+        fetch('/backend/admin/voters.php?action=list', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderTable('voters-content', data.voters, ['ID', 'Voter ID', 'Name'], 'voter');
+                } else {
+                    document.getElementById('voters-content').textContent = data.message;
+                }
+            });
+    }
+    function deactivateVoter(row) {
+        if (!confirm('Deactivate this voter?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('id', row.ID);
+        fetch('/backend/admin/voters.php?action=deactivate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('voters-success').textContent = data.message;
+                fetchCSRFToken().then(loadVoters);
+            } else {
+                document.getElementById('voters-message').textContent = data.message;
+            }
+        });
+    }
+    // --- Results ---
+    function loadResults() {
+        setLoading('results-content');
+        fetch('/backend/admin/results.php?action=stats', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('results-content').textContent = JSON.stringify(data.stats, null, 2);
+                } else {
+                    document.getElementById('results-content').textContent = data.message;
+                }
+            });
+    }
+    function triggerCount() {
+        if (!confirm('Trigger result counting?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        fetch('/backend/admin/results.php?action=count', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('results-success').textContent = data.message;
+                fetchCSRFToken().then(loadResults);
+            } else {
+                document.getElementById('results-message').textContent = data.message;
+            }
+        });
+    }
+    function publishResults() {
+        if (!confirm('Publish results?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        fetch('/backend/admin/results.php?action=publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('results-success').textContent = data.message;
+                fetchCSRFToken().then(loadResults);
+            } else {
+                document.getElementById('results-message').textContent = data.message;
+            }
+        });
+    }
+    function exportResults() {
+        alert('Export not implemented.');
+    }
+    // --- Audit Logs ---
+    function loadAuditLogs() {
+        setLoading('audit-content');
+        fetch('/backend/admin/audit_logs.php?action=list', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderTable('audit-content', data.logs, ['ID', 'User Type', 'User ID', 'Action', 'Details', 'Created At'], 'log');
+                } else {
+                    document.getElementById('audit-content').textContent = data.message;
+                }
+            });
+    }
+    function exportLogs() {
+        alert('Export not implemented.');
+    }
+    // --- Admins ---
+    function loadAdmins() {
+        setLoading('admins-content');
+        fetch('/backend/admin/admins.php?action=list', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderTable('admins-content', data.admins, ['ID', 'Username', 'Name', 'Created At'], 'admin');
+                } else {
+                    document.getElementById('admins-content').textContent = data.message;
+                }
+            });
+    }
+    function showAdminModal() {
+        document.getElementById('adminForm').reset();
+        document.getElementById('admin-modal').classList.add('active');
+    }
+    function closeAdminModal() {
+        document.getElementById('admin-modal').classList.remove('active');
+    }
+    document.getElementById('adminForm').onsubmit = function(e) {
+        e.preventDefault();
+        const username = document.getElementById('admin-username').value;
+        const name = document.getElementById('admin-name').value;
+        const password = document.getElementById('admin-password').value;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('username', username);
+        formData.append('name', name);
+        formData.append('password', password);
+        fetch('/backend/admin/admins.php?action=add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('admins-success').textContent = data.message;
+                closeAdminModal();
+                fetchCSRFToken().then(loadAdmins);
+            } else {
+                document.getElementById('admins-message').textContent = data.message;
+            }
+        });
+    };
+    function removeAdmin(row) {
+        if (!confirm('Remove this admin?')) return;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('id', row.ID);
+        fetch('/backend/admin/admins.php?action=remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('admins-success').textContent = data.message;
+                fetchCSRFToken().then(loadAdmins);
+            } else {
+                document.getElementById('admins-message').textContent = data.message;
+            }
+        });
+    }
+    // --- Table Renderer ---
+    function renderTable(containerId, data, headers, type) {
+        const container = document.getElementById(containerId);
+        if (!data || data.length === 0) {
+            container.innerHTML = '<em>No data found.</em>';
+            return;
+        }
+        let html = '<table><thead><tr>';
+        headers.forEach(h => { html += `<th>${h}</th>`; });
+        html += '<th>Actions</th></tr></thead><tbody>';
+        data.forEach(row => {
+            html += '<tr>';
+            headers.forEach(h => {
+                const key = Object.keys(row).find(k => k.toLowerCase().replace(/_/g,' ') === h.toLowerCase());
+                html += `<td>${row[key] !== undefined ? row[key] : ''}</td>`;
+            });
+            html += `<td>${renderActions(type, row)}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+    function renderActions(type, row) {
+        switch(type) {
+            case 'election':
+                return `<button class="action-btn" onclick='editElection(${JSON.stringify(row)})'>Edit</button>` +
+                       `<button class="action-btn" onclick='deleteElection(${JSON.stringify(row)})'>Delete</button>`;
+            case 'candidate':
+                return `<button class="action-btn" onclick='approveCandidate(${JSON.stringify(row)})'>Approve</button>` +
+                       `<button class="action-btn" onclick='rejectCandidate(${JSON.stringify(row)})'>Reject</button>`;
+            case 'voter':
+                return `<button class="action-btn" onclick='deactivateVoter(${JSON.stringify(row)})'>Deactivate</button>`;
+            case 'admin':
+                return `<button class="action-btn" onclick='removeAdmin(${JSON.stringify(row)})'>Remove</button>`;
+            case 'log':
+                return '';
+            default:
+                return '';
+        }
+    }
+    // --- Loading Indicator ---
+    function setLoading(containerId) {
+        document.getElementById(containerId).innerHTML = '<span class="loading">Loading...</span>';
+    }
+    // --- Logout ---
+    function logout() {
+        fetch('/backend/logout.php', { credentials: 'include' })
+            .then(res => res.json())
+            .then(() => {
+                window.location.href = 'admin-login.html';
+            });
+    }
+    // --- Session Expiry Handling ---
+    function handleSession(res) {
+        if (res.status === 403) {
+            window.location.href = 'admin-login.html';
+            return Promise.reject('Session expired');
+        }
+        return res;
+    }
+    </script>
+</body>
+</html> 

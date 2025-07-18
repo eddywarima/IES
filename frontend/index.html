@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEBC Voting Portal</title>
+    <style>
+        :root {
+            --kenya-black: #000000;
+            --kenya-red: #BB1E10;
+            --kenya-green: #006400;
+            --kenya-white: #FFFFFF;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--kenya-white) 0%, var(--kenya-green) 100%);
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-red) 100%);
+            color: var(--kenya-white);
+            padding: 2rem 0 1rem 0;
+            text-align: center;
+            letter-spacing: 2px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        header .flag-bar {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0 0.5rem 0;
+        }
+        .flag-bar span {
+            display: inline-block;
+            width: 40px;
+            height: 8px;
+            margin: 0 2px;
+            border-radius: 4px;
+        }
+        .flag-black { background: var(--kenya-black); }
+        .flag-red { background: var(--kenya-red); }
+        .flag-green { background: var(--kenya-green); }
+        main {
+            max-width: 500px;
+            margin: 2.5rem auto;
+            background: var(--kenya-white);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 2.5rem 2rem 2rem 2rem;
+            text-align: center;
+        }
+        main p {
+            font-size: 1.15rem;
+            color: var(--kenya-black);
+            margin-bottom: 2rem;
+        }
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            align-items: center;
+        }
+        nav a {
+            display: block;
+            width: 80%;
+            max-width: 320px;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: var(--kenya-white);
+            background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-green) 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            transition: background 0.2s, transform 0.2s;
+        }
+        nav a.voter { background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-green) 100%); }
+        nav a.candidate { background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-red) 100%); }
+        nav a.admin { background: linear-gradient(90deg, var(--kenya-black) 60%, #444 100%); }
+        nav a:hover {
+            transform: translateY(-2px) scale(1.03);
+            filter: brightness(1.08);
+        }
+        @media (max-width: 600px) {
+            main { padding: 1.2rem 0.5rem; }
+            nav a { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>IEBC Voting Portal 🇰🇪</h1>
+        <div class="flag-bar">
+            <span class="flag-black"></span>
+            <span class="flag-red"></span>
+            <span class="flag-green"></span>
+        </div>
+    </header>
+    <main>
+        <p>Welcome to the official digital election system for Kenya.<br>Choose your portal to proceed:</p>
+        <nav>
+            <a class="voter" href="voter-login.html">Voter Portal</a>
+            <a class="candidate" href="candidate-login.html">Candidate Portal</a>
+            <a class="admin" href="admin-login.html">Admin Dashboard</a>
+        </nav>
+    </main>
+</body>
+</html> 

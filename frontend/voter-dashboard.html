@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter Dashboard - IEBC Voting Portal</title>
+    <style>
+        :root {
+            --kenya-black: #000000;
+            --kenya-red: #BB1E10;
+            --kenya-green: #006400;
+            --kenya-white: #FFFFFF;
+        }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, var(--kenya-white) 0%, var(--kenya-green) 100%); margin: 0; min-height: 100vh; }
+        header { background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-red) 100%); color: var(--kenya-white); padding: 2rem 0 1rem 0; text-align: center; letter-spacing: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        header h2 { margin: 0; font-size: 2rem; font-weight: bold; }
+        header .flag-bar { display: flex; justify-content: center; margin: 1rem 0 0.5rem 0; }
+        .flag-bar span { display: inline-block; width: 40px; height: 8px; margin: 0 2px; border-radius: 4px; }
+        .flag-black { background: var(--kenya-black); }
+        .flag-red { background: var(--kenya-red); }
+        .flag-green { background: var(--kenya-green); }
+        .logout-btn { float: right; margin: 1rem 2rem 0 0; background: var(--kenya-red); color: var(--kenya-white); border: none; padding: 0.5rem 1.2rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .logout-btn:hover { background: var(--kenya-black); }
+        main { max-width: 900px; margin: 2.5rem auto; background: var(--kenya-white); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2.5rem 2rem 2rem 2rem; }
+        h3 { color: var(--kenya-green); }
+        .election-block { margin-bottom: 2.5rem; border-bottom: 1px solid #eee; padding-bottom: 2rem; }
+        .seat-block { margin-bottom: 1.5rem; }
+        .candidates-list { display: flex; flex-wrap: wrap; gap: 1.2rem; margin: 1rem 0; }
+        .candidate-card { background: #f4f4f4; border-radius: 8px; padding: 1rem 1.5rem; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .vote-form { margin-top: 0.7rem; }
+        .vote-btn { background: var(--kenya-green); color: var(--kenya-white); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .vote-btn:hover { background: var(--kenya-red); }
+        .status-msg { color: var(--kenya-red); margin: 0.7rem 0; }
+        .success-msg { color: var(--kenya-green); margin: 0.7rem 0; }
+        .loading { color: var(--kenya-black); font-style: italic; }
+        @media (max-width: 600px) { main { padding: 1.2rem 0.5rem; } .candidates-list { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <header>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        <h2>Voter Dashboard</h2>
+        <div class="flag-bar">
+            <span class="flag-black"></span>
+            <span class="flag-red"></span>
+            <span class="flag-green"></span>
+        </div>
+    </header>
+    <main>
+        <div id="welcome"></div>
+        <div id="dashboard-message" class="status-msg"></div>
+        <div id="elections-list"></div>
+    </main>
+    <script>
+    let csrfToken = '';
+    function fetchCSRFToken() {
+        return fetch('/backend/config/get_csrf.php', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => { csrfToken = data.csrf_token; });
+    }
+    function logout() {
+        fetch('/backend/logout.php', { credentials: 'include' })
+            .then(res => res.json())
+            .then(() => {
+                window.location.href = 'voter-login.html';
+            });
+    }
+    function handleSession(res) {
+        if (res.status === 403) {
+            window.location.href = 'voter-login.html';
+            return Promise.reject('Session expired');
+        }
+        return res;
+    }
+    function setLoading(containerId) {
+        document.getElementById(containerId).innerHTML = '<span class="loading">Loading...</span>';
+    }
+    function loadDashboard() {
+        setLoading('elections-list');
+        fetch('/backend/voter/dashboard.php', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('welcome').innerHTML = `<h3>Welcome, ${data.voter_name}!</h3>`;
+                    renderElections(data.elections);
+                } else {
+                    document.getElementById('dashboard-message').textContent = data.message;
+                }
+            });
+    }
+    function renderElections(elections) {
+        const container = document.getElementById('elections-list');
+        if (!elections || elections.length === 0) {
+            container.innerHTML = '<em>No ongoing elections at the moment.</em>';
+            return;
+        }
+        let html = '';
+        elections.forEach(election => {
+            html += `<div class="election-block"><h4>${election.name}</h4><div><strong>Start:</strong> ${election.start_date} <strong>End:</strong> ${election.end_date}</div>`;
+            election.seats.forEach(seat => {
+                html += `<div class="seat-block"><h5>Seat: ${seat.name}</h5>`;
+                if (seat.has_voted) {
+                    html += `<div class="success-msg">You have already voted for this seat.</div>`;
+                } else if (seat.candidates.length === 0) {
+                    html += `<div class="status-msg">No approved candidates for this seat.</div>`;
+                } else {
+                    html += `<form class="vote-form" onsubmit="return submitVote(event, ${election.id}, ${seat.id})">`;
+                    html += `<input type="hidden" name="csrf_token" value="${csrfToken}">`;
+                    html += `<input type="hidden" name="election_id" value="${election.id}">`;
+                    html += `<input type="hidden" name="seat_id" value="${seat.id}">`;
+                    html += '<div class="candidates-list">';
+                    seat.candidates.forEach(candidate => {
+                        html += `<label class="candidate-card"><input type="radio" name="candidate_id" value="${candidate.id}" required> ${candidate.name}</label>`;
+                    });
+                    html += '</div>';
+                    html += `<button type="submit" class="vote-btn">Vote</button>`;
+                    html += `</form><div class="status-msg" id="vote-status-${election.id}-${seat.id}"></div>`;
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+        });
+        container.innerHTML = html;
+    }
+    function submitVote(e, election_id, seat_id) {
+        e.preventDefault();
+        const form = e.target;
+        const candidate_id = form.candidate_id.value;
+        const formData = new URLSearchParams();
+        formData.append('csrf_token', csrfToken);
+        formData.append('election_id', election_id);
+        formData.append('seat_id', seat_id);
+        formData.append('candidate_id', candidate_id);
+        const statusId = `vote-status-${election_id}-${seat_id}`;
+        document.getElementById(statusId).textContent = 'Submitting vote...';
+        fetch('/backend/voter/vote.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(statusId).textContent = data.message;
+                fetchCSRFToken().then(loadDashboard);
+            } else {
+                document.getElementById(statusId).textContent = data.message;
+                fetchCSRFToken();
+            }
+        });
+        return false;
+    }
+    // Initial load
+    fetchCSRFToken().then(loadDashboard);
+    </script>
+</body>
+</html> 
