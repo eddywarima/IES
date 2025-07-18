@@ -11,7 +11,7 @@
             --kenya-green: #006400;
             --kenya-white: #FFFFFF;
         }
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, var(--kenya-white) 0%, var(--kenya-green) 100%); min-height: 100vh; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, var(--kenya-white) 0%, var(--kenya-green) 100%); margin: 0; min-height: 100vh; }
         header { background: linear-gradient(90deg, var(--kenya-black) 60%, var(--kenya-red) 100%); color: var(--kenya-white); padding: 2rem 0 1rem 0; text-align: center; letter-spacing: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         header h2 { margin: 0; font-size: 2rem; font-weight: bold; }
         header .flag-bar { display: flex; justify-content: center; margin: 1rem 0 0.5rem 0; }
@@ -19,16 +19,26 @@
         .flag-black { background: var(--kenya-black); }
         .flag-red { background: var(--kenya-red); }
         .flag-green { background: var(--kenya-green); }
-        main { max-width: 500px; margin: 2.5rem auto; background: var(--kenya-white); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2.5rem 2rem 2rem 2rem; text-align: center; }
-        .placeholder { background: #e0e0e0; color: #555; padding: 1rem; border-radius: 6px; margin: 1.5rem 0; }
-        .links { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.7rem; }
-        .links a { color: var(--kenya-red); text-decoration: none; font-weight: 500; }
-        .links a:hover { text-decoration: underline; color: var(--kenya-green); }
+        .logout-btn { float: right; margin: 1rem 2rem 0 0; background: var(--kenya-red); color: var(--kenya-white); border: none; padding: 0.5rem 1.2rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .logout-btn:hover { background: var(--kenya-black); }
+        main { max-width: 700px; margin: 2.5rem auto; background: var(--kenya-white); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2.5rem 2rem 2rem 2rem; }
+        h3 { color: var(--kenya-green); }
+        .status-msg { color: var(--kenya-red); margin: 0.7rem 0; }
+        .success-msg { color: var(--kenya-green); margin: 0.7rem 0; }
+        .info-block { background: #f4f4f4; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .upload-form { margin-top: 1.2rem; }
+        .upload-form label { font-weight: bold; display: block; margin: 0.7rem 0 0.2rem 0; }
+        .upload-form input, .upload-form textarea { width: 100%; padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 1rem; }
+        .upload-btn { background: var(--kenya-green); color: var(--kenya-white); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .upload-btn:hover { background: var(--kenya-red); }
+        .candidate-photo { max-width: 120px; border-radius: 8px; margin-top: 0.5rem; }
+        .loading { color: var(--kenya-black); font-style: italic; }
         @media (max-width: 600px) { main { padding: 1.2rem 0.5rem; } }
     </style>
 </head>
 <body>
     <header>
+        <button class="logout-btn" onclick="logout()">Logout</button>
         <h2>Candidate Dashboard</h2>
         <div class="flag-bar">
             <span class="flag-black"></span>
@@ -37,15 +47,106 @@
         </div>
     </header>
     <main>
-        <p>Welcome, <strong>[Candidate Name]</strong>!</p>
-        <section>
-            <h3>Application Status</h3>
-            <div class="placeholder">[Status and participation info will appear here]</div>
-        </section>
-        <div class="links">
-            <a href="candidate-login.html">Logout</a>
-            <a href="index.html">Back to Home</a>
-        </div>
+        <div id="welcome"></div>
+        <div id="dashboard-message" class="status-msg"></div>
+        <div id="candidate-info"></div>
+        <div id="upload-section"></div>
     </main>
+    <script>
+    let csrfToken = '';
+    function fetchCSRFToken() {
+        return fetch('/backend/config/get_csrf.php', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => { csrfToken = data.csrf_token; });
+    }
+    function logout() {
+        fetch('/backend/logout.php', { credentials: 'include' })
+            .then(res => res.json())
+            .then(() => {
+                window.location.href = 'candidate-login.html';
+            });
+    }
+    function handleSession(res) {
+        if (res.status === 403) {
+            window.location.href = 'candidate-login.html';
+            return Promise.reject('Session expired');
+        }
+        return res;
+    }
+    function setLoading(containerId) {
+        document.getElementById(containerId).innerHTML = '<span class="loading">Loading...</span>';
+    }
+    function loadDashboard() {
+        setLoading('candidate-info');
+        fetch('/backend/candidate/dashboard.php', { credentials: 'include' })
+            .then(handleSession)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('welcome').innerHTML = `<h3>Welcome, ${data.candidate_name}!</h3>`;
+                    renderCandidateInfo(data);
+                } else {
+                    document.getElementById('dashboard-message').textContent = data.message;
+                }
+            });
+    }
+    function renderCandidateInfo(data) {
+        const container = document.getElementById('candidate-info');
+        let html = `<div class="info-block"><strong>Seat:</strong> ${data.seat}<br><strong>Status:</strong> ${data.status.charAt(0).toUpperCase() + data.status.slice(1)}`;
+        if (data.status === 'pending') {
+            html += '<div class="status-msg">Your application is pending admin approval.</div>';
+        } else if (data.status === 'approved') {
+            html += '<div class="success-msg">You are approved to participate in the election!</div>';
+        } else if (data.status === 'rejected') {
+            html += '<div class="status-msg">Your application was rejected.</div>';
+        }
+        if (data.manifesto) {
+            html += `<div><strong>Manifesto:</strong><br><pre>${data.manifesto}</pre></div>`;
+        }
+        if (data.documents) {
+            html += `<div><strong>Documents:</strong> <a href="${data.documents}" target="_blank">View</a></div>`;
+        }
+        if (data.photo) {
+            html += `<div><strong>Photo:</strong><br><img src="${data.photo}" class="candidate-photo"></div>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+        renderUploadSection(data);
+    }
+    function renderUploadSection(data) {
+        const container = document.getElementById('upload-section');
+        let html = `<form class="upload-form" id="uploadForm" enctype="multipart/form-data">`;
+        html += `<label for="manifesto">Manifesto</label><textarea id="manifesto" name="manifesto" rows="4">${data.manifesto ? data.manifesto : ''}</textarea>`;
+        html += `<label for="documents">Documents (PDF)</label><input type="file" id="documents" name="documents" accept="application/pdf">`;
+        html += `<label for="photo">Photo (JPG/PNG)</label><input type="file" id="photo" name="photo" accept="image/*">`;
+        html += `<button type="submit" class="upload-btn">Update Application</button>`;
+        html += `</form><div class="status-msg" id="upload-status"></div>`;
+        container.innerHTML = html;
+        document.getElementById('uploadForm').onsubmit = submitUpload;
+    }
+    function submitUpload(e) {
+        e.preventDefault();
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+        formData.append('csrf_token', csrfToken);
+        fetch('/backend/candidate/upload.php', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        })
+        .then(handleSession)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('upload-status').textContent = data.message;
+            if (data.success) {
+                fetchCSRFToken().then(loadDashboard);
+            } else {
+                fetchCSRFToken();
+            }
+        });
+    }
+    // Initial load
+    fetchCSRFToken().then(loadDashboard);
+    </script>
 </body>
 </html> 
