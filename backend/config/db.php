@@ -2,8 +2,8 @@
 // Database connection settings
 $host = 'localhost'; // Change if not running locally
 $user = 'root';      // Change to your MySQL username
-$pass = '';          // Change to your MySQL password
-$db   = 'iebc_voting'; // Change to your database name
+$pass = '9417Wekm.';          // Change to your MySQL password
+$db   = 'ies'; // Change to your database name
 
 // Create connection
 $conn = new mysqli($host, $user, $pass, $db);
