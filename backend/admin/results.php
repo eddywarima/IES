@@ -1,18 +1,19 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/session.php';
-header('Content-Type: application/json');
+
+$action = $_GET['action'] ?? $_POST['action'] ?? 'stats';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     http_response_code(403);
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
-$action = $_GET['action'] ?? $_POST['action'] ?? 'stats';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
         exit;
     }
@@ -28,7 +29,7 @@ function log_action($conn, $action, $details) {
 
 switch ($action) {
     case 'stats':
-        // Example: votes per seat for ongoing/completed elections
+        header('Content-Type: application/json');
         $sql = 'SELECT s.name AS seat, COUNT(v.id) AS votes
                 FROM votes v
                 JOIN seats s ON v.seat_id = s.id
@@ -43,21 +44,36 @@ switch ($action) {
         echo json_encode(['success' => true, 'stats' => $stats]);
         break;
     case 'count':
-        // For demo, just log the action
+        header('Content-Type: application/json');
         log_action($conn, 'count_results', 'Results counting triggered');
         echo json_encode(['success' => true, 'message' => 'Counting triggered']);
         break;
     case 'publish':
-        // For demo, just log the action
+        header('Content-Type: application/json');
         log_action($conn, 'publish_results', 'Results published');
         echo json_encode(['success' => true, 'message' => 'Results published']);
         break;
     case 'export':
-        // For demo, just log the action
+        // Export results as CSV
         log_action($conn, 'export_results', 'Results exported');
-        echo json_encode(['success' => true, 'message' => 'Results exported']);
-        break;
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="results_export.csv"');
+        $sql = 'SELECT s.name AS seat, COUNT(v.id) AS votes
+                FROM votes v
+                JOIN seats s ON v.seat_id = s.id
+                JOIN elections e ON v.election_id = e.id
+                WHERE e.status IN ("ongoing", "completed")
+                GROUP BY s.id';
+        $result = $conn->query($sql);
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Seat', 'Votes']);
+        while ($row = $result->fetch_assoc()) {
+            fputcsv($output, [$row['seat'], $row['votes']]);
+        }
+        fclose($output);
+        exit;
     default:
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Unknown action']);
 }
 ?> 
